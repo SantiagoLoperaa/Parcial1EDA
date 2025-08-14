@@ -1,56 +1,47 @@
-import requests
-import random
-from historialtransacciones import Historial
-from bolsa import Cartera
+# Acá ocurre la magia baby. Definitivamente nada fue más difícil que el hp motor de simulación, este parcial ha sido una hemorroides definitivamente.
 
+import logging
+from estructuras_datos import BolsaActivos, PilaHistorial
+from modelos import Usuario
+from motor_simulacion import MotorSimulacion
 
-url = "https://api.coinlore.net/api/tickers/"
+def configurar_logging():
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
-    # Hacer la solicitud GET
-response = requests.get(url)
+def crear_usuarios_iniciales():
+    return [
+        Usuario(1, "Ana", 1_000_000, BolsaActivos, PilaHistorial),
+        Usuario(2, "Luis", 1_000_000, BolsaActivos, PilaHistorial),
+        Usuario(3, "Maya", 1_000_000, BolsaActivos, PilaHistorial),
+    ]
 
-# Verificar si la petición fue exitosa
-if response.status_code == 200:
-    data = response.json()  # Convertir respuesta a diccionario de Python
-    monedas = data.get("data", [])  # Lista de criptomonedas
-    
-class Accion:
-    def __init__(self, descripcion, monto, cantidad, criptomoneda):
-        self.descripcion = descripcion
-        self.monto = monto
-        self.cantidad = cantidad
-        self.criptomoneda = criptomoneda
-    
-class Transaccion(Accion):
-    def __init__(self, descripcion, monto, cantidad, criptomoneda):
-        super().__init__(descripcion, monto, cantidad, criptomoneda):
-        
+def main():
+    configurar_logging()
+    tasa_cambio_usd_a_cop = 4200
+    usuarios = crear_usuarios_iniciales()
 
-class Usuario(Historial, Cartera, Transaccion):
-  def __init__(self, id, nombre, saldo, historial, cartera):
-    super().__init__(historial, cartera)
-    self.id = id
-    self.nombre = nombre
-    self.saldo = saldo
-    self.historial = historial 
-    self.cartera = cartera
-    
-    def Movimiento(self, descripcion, monto, cantidad):
-        descripcion = random.choice(["Compra", "Venta"])
-        monto = random.randint(monedas['price_usd'])
-        cantidad = random.randint(1, 5)
+    # Inicializar motor con lista vacía (se llenará desde la API, que hp gallo)
+    motor = MotorSimulacion(usuarios, [], tasa_cambio_usd_a_cop)
 
-    transaccion = Transaccion(descripcion, monto, cantidad, self.criptomoneda)
-    return transaccion
-    
+    # Cargar precios y lista completa de criptos desde API
+    motor.mercado.cargar_precios_desde_api()
+    motor.lista_simbolos_cripto = motor.mercado.lista_simbolos_cripto
 
+    # Simulación de 10 turnos
+    for turno in range(10):
+        logging.info(f"--- Turno {turno+1} ---")
+        motor.ejecutar_turno()
 
+        # =========================
+        #  De acá pa abajo es FASE 2, procesamiento de órdenes primero
+        # =========================
+        motor.procesar_una_orden()
+        motor.procesar_una_orden()
 
-    
-    
-usuario1 = Usuario(1, "Juan", 1000, [], {})
-transaccion = Movimiento()
-print(transaccion)
+    # =========================
+    #  Reporte final, también de fase 2
+    # =========================
+    motor.generar_reporte_final()
 
-
-
+if __name__ == "__main__":
+    main()
